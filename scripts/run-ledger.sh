@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 REVIEW_SECONDS=$((24 * 3600))
 GRACE_SECONDS=$((48 * 3600))
@@ -52,9 +53,9 @@ check_delta_ran_when_should_skip() {
 # Rule 2: Delta failed when it should have run
 check_delta_failed_when_should_run() {
   local run_json
-  run_json=$(gh run list --workflow=delta.yml --limit 1 \
+  run_json=$(gh run list --workflow=delta.yml --limit 5 \
     --json conclusion,createdAt \
-    --jq '.[]' 2>/dev/null || echo "")
+    --jq '[.[] | select(.conclusion == "failure" or .conclusion == "success")] | first' 2>/dev/null || echo "")
   [[ -z "$run_json" ]] && return 0
 
   local run_created_at
@@ -182,20 +183,13 @@ pr_table=$(gh pr list --state open \
   2>/dev/null || echo "| (error fetching PR list) | | | |")
 
 # Call Claude for narrative — fall back to raw gaps if unavailable
-local_prompt=$(cat "${REPO_ROOT}/ledger/advisors/ledger/prompt.md")
-narrative=$(claude --print --model claude-sonnet-4-6 -p "$local_prompt" <<EOF
-Today is ${TODAY}.
-
-## Gaps detected
-
-${gap_text}
-
-## Open PRs
-| PR | Title | Labels | Date |
-|----|-------|--------|------|
-${pr_table}
-EOF
-) || narrative="${gap_text}"
+local_prompt=$(cat "${SCRIPT_DIR}/../advisors/ledger/prompt.md")
+claude_input=$(mktemp)
+printf 'Today is %s.\n\n## Gaps detected\n\n%s\n## Open PRs\n| PR | Title | Labels | Date |\n|----|-------|--------|------|\n%s\n' \
+  "${TODAY}" "${gap_text}" "${pr_table}" > "${claude_input}"
+narrative=$(claude --print --model claude-sonnet-4-6 -p "$local_prompt" < "${claude_input}") \
+  || narrative="${gap_text}"
+rm -f "${claude_input}"
 
 # Open GitHub issue
 gh issue create \
