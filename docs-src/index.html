@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Autonomous pipeline audit agent for GitHub repos. Runs at 8am UTC — silent on success, opens an issue when something diverged.">
+  <title>Ledger — Pipeline gap auditor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Hero -->
+  <section id="hero">
+    <div class="hero-badge">git submodule</div>
+    <h1>Know when your<br>pipeline diverges.</h1>
+    <p class="subtitle">
+      Ledger runs at 8am UTC every day, checks every pipeline handoff point, and opens a <code>ledger/gap</code> issue with a plain-English diagnosis when something went wrong. Silent on success.
+    </p>
+    <div class="cta-group">
+      <a href="https://github.com/derrybirkett/ledger" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        View on GitHub
+      </a>
+      <a href="#install" class="btn btn-secondary">Get started →</a>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how-it-works">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Five deterministic rules run every morning</h3>
+          <p>Each rule checks one pipeline handoff — Delta→PR, PR→Council, Council→Merge, Merge→merged. Rules are stateless: all state lives in GitHub labels and live API calls. No database, no config needed.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Claude writes a plain-English diagnosis</h3>
+          <p>When gaps are found, the raw rule output is handed to Claude, which writes a concise morning briefing — one diagnosis and one concrete action per gap. No hedging, no jargon.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>A <code>ledger/gap</code> issue lands in your inbox</h3>
+          <p>The report is opened as a GitHub issue with the <code>ledger/gap</code> label, including the full diagnosis and a live pipeline state table. If no gaps: silent exit, no issue.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gap types -->
+  <section id="gaps">
+    <h2>Gap types monitored</h2>
+    <div class="gap-table">
+      <div class="gap-row gap-row-header">
+        <span>Rule</span>
+        <span>What it checks</span>
+      </div>
+      <div class="gap-row">
+        <span class="gap-rule">Delta ran when it should skip</span>
+        <span class="gap-desc">Delta opened a PR despite existing open delta PRs — duplicate work</span>
+      </div>
+      <div class="gap-row">
+        <span class="gap-rule">Delta failed when it should run</span>
+        <span class="gap-desc">Delta failed with no open PRs and a non-empty backlog — blocked cycle</span>
+      </div>
+      <div class="gap-row">
+        <span class="gap-rule">Merge window expired</span>
+        <span class="gap-desc">PR had <code>merge/ready</code> for &gt;48h but wasn't merged — Merge agent down</span>
+      </div>
+      <div class="gap-row">
+        <span class="gap-rule">Council approved, merge/ready missing</span>
+        <span class="gap-desc"><code>council/approved</code> without <code>merge/ready</code> — integration hook not installed</span>
+      </div>
+      <div class="gap-row">
+        <span class="gap-rule">Council review overdue</span>
+        <span class="gap-desc">Delta PR open &gt;24h with no Council review — Council not running</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Install -->
+  <section id="install">
+    <h2>Install</h2>
+    <div class="install-block">
+      <div class="block-header">
+        <span class="dot dot-red"></span>
+        <span class="dot dot-yellow"></span>
+        <span class="dot dot-green"></span>
+        bash
+      </div>
+      <pre><span class="comment"># 1. Add Ledger as a submodule</span>
+<span class="cmd">git submodule add</span> <span class="arg">https://github.com/derrybirkett/ledger</span> ledger
+
+<span class="comment"># 2. Copy the workflow into your repo</span>
+<span class="cmd">cp</span> <span class="arg">ledger/.github/workflows/ledger.yml .github/workflows/ledger.yml</span>
+
+<span class="comment"># 3. Create the ledger/gap label (one-time)</span>
+<span class="cmd">bash ledger/scripts/setup.sh</span>
+
+<span class="comment"># 4. Add your Anthropic API key to GitHub repo secrets</span>
+<span class="comment">#    Settings → Secrets → ANTHROPIC_API_KEY</span>
+
+<span class="comment"># 5. Commit and push — audits fire at 8am UTC daily</span>
+<span class="cmd">git add</span> <span class="arg">.gitmodules ledger .github/workflows/ledger.yml</span>
+<span class="cmd">git commit -m</span> <span class="arg">"chore: install ledger"</span>
+<span class="cmd">git push</span></pre>
+    </div>
+    <p class="install-note">Requires <code>ANTHROPIC_API_KEY</code> and <code>GITHUB_TOKEN</code> (automatically available in Actions). Trigger a test run with <code>gh workflow run ledger.yml</code>.</p>
+  </section>
+
+  <!-- DeltaSuite -->
+  <section id="deltasuite">
+    <h2>DeltaSuite</h2>
+    <p>Ledger works standalone, but closes the accountability loop when paired with the full suite:</p>
+    <div class="suite-grid">
+      <a href="https://github.com/derrybirkett/delta" class="suite-card">
+        <span class="suite-name">Delta</span>
+        <span class="suite-role">Builds features autonomously, nightly</span>
+      </a>
+      <a href="https://github.com/derrybirkett/council" class="suite-card">
+        <span class="suite-name">Council</span>
+        <span class="suite-role">AI CTO review gate on every PR</span>
+      </a>
+      <a href="https://github.com/derrybirkett/merge" class="suite-card">
+        <span class="suite-name">Merge</span>
+        <span class="suite-role">Autonomous PR merging on approval</span>
+      </a>
+      <a href="https://github.com/derrybirkett/ledger" class="suite-card suite-card-active">
+        <span class="suite-name">Ledger</span>
+        <span class="suite-role">Audits the pipeline every morning</span>
+      </a>
+    </div>
+    <p class="suite-loop"><strong>Delta builds → Council reviews → Merge ships → Ledger audits</strong></p>
+  </section>
+
+  <!-- Changelog -->
+  <section id="changelog">
+    <h2>Changelog</h2>
+    <div class="changelog">
+      <div class="release">
+        <div class="release-header">
+          <span class="release-version">v0.1.0</span>
+          <span class="release-date">2026-05-22</span>
+        </div>
+        <ul class="release-notes">
+          <li>Initial release</li>
+          <li>Five deterministic gap rules covering every pipeline handoff point</li>
+          <li>Claude-written diagnosis: 1–2 sentence briefing + action per gap</li>
+          <li>Silent on success — only opens an issue when something diverged</li>
+          <li>Validated with live run on deltado, detected 3 real pipeline gaps</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div class="container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;width:100%">
+    <span>Ledger — pipeline gap auditor</span>
+    <a href="https://github.com/derrybirkett/ledger">github.com/derrybirkett/ledger</a>
+  </div>
+</footer>
+
+</body>
+</html>
