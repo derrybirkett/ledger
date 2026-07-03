@@ -94,6 +94,11 @@ check_merge_window_expired() {
   while IFS= read -r pr; do
     [[ -z "$pr" ]] && continue
 
+    # Skip PRs that are intentionally blocked — merge/blocked + merge/ready is expected state
+    local is_blocked
+    is_blocked=$(gh pr view "$pr" --json labels --jq '[.labels[].name] | contains(["merge/blocked"])' 2>/dev/null || echo "false")
+    [[ "$is_blocked" == "true" ]] && continue
+
     local labeled_at
     labeled_at=$(gh api --paginate "repos/{owner}/{repo}/issues/${pr}/events" 2>/dev/null \
       | jq -rs '[.[][] | select(.event == "labeled" and .label.name == "merge/ready")] | max_by(.created_at) | .created_at // empty' \
