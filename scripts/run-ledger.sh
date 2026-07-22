@@ -192,7 +192,7 @@ local_prompt=$(cat "${SCRIPT_DIR}/../advisors/ledger/prompt.md")
 claude_input=$(mktemp)
 printf 'Today is %s.\n\n## Gaps detected\n\n%s\n## Open PRs\n| PR | Title | Labels | Date |\n|----|-------|--------|------|\n%s\n' \
   "${TODAY}" "${gap_text}" "${pr_table}" > "${claude_input}"
-narrative=$(claude --print --model claude-sonnet-4-6 -p "$local_prompt" < "${claude_input}") \
+narrative=$(claude --print --model haiku -p "$local_prompt" < "${claude_input}") \
   || narrative="${gap_text}"
 rm -f "${claude_input}"
 
